@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Environment
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Extracted data
+extracted_css/
+
+# OS files
+.DS_Store
+Thumbs.db
+@eaDir/
+
+# IDE
+.vscode/
+.idea/
+
+# Claude
+.claude/
+
+# Docker volumes
+mysql_data/

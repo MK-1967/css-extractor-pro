@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  # Base de données MySQL
+  db:
+    image: mysql:8.0
+    container_name: css-extractor-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: css_extractor
+      MYSQL_USER: css_user
+      MYSQL_PASSWORD: css_pass123
+    ports:
+      - "3308:3306"  # Port externe 3308 (3307 était occupé)
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/migrations:/docker-entrypoint-initdb.d
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 10
+
+  # Backend Node.js
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: css-extractor-backend
+    restart: unless-stopped
+    environment:
+      PORT: 3002
+      DB_HOST: db
+      DB_USER: css_user
+      DB_PASS: css_pass123
+      DB_NAME: css_extractor
+      NODE_ENV: production
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./extracted_css:/extracted_css
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # Frontend React
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://10.40.10.107:3002
+    container_name: css-extractor-frontend
+    restart: unless-stopped
+    ports:
+      - "3003:80"  # Nginx sur port 80 interne, 3003 externe
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
