@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Search, Download, Link2, Loader2, Copy, Check, Save, Rss } from 'lucide-react';
+import { Search, Download, Link2, Loader2, Copy, Check, Save, Rss, X } from 'lucide-react';
 import API_URL from '../config';
 import FeedPreview from './FeedPreview';
 
@@ -13,7 +13,7 @@ const SELECTOR_FIELDS = [
   { key: 'image', label: 'Image', placeholder: 'img, img.thumbnail', hint: 'Selecteur de l\'image' },
 ];
 
-function FeedCreator() {
+function FeedCreator({ editingFeed, onClearEdit }) {
   const [mode, setMode] = useState('rss'); // 'rss' ou 'css'
   const [rssUrl, setRssUrl] = useState('');
   const [rssTitle, setRssTitle] = useState('');
@@ -57,6 +57,30 @@ function FeedCreator() {
   const [permalinkUrl, setPermalinkUrl] = useState('');
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Pré-remplir le formulaire en mode édition
+  useEffect(() => {
+    if (editingFeed) {
+      setMode('css');
+      setUrl(editingFeed.source_url || '');
+      setSelectors({
+        item: editingFeed.selector_item || '',
+        title: editingFeed.selector_title || '',
+        link: editingFeed.selector_link || '',
+        description: editingFeed.selector_description || '',
+        date: editingFeed.selector_date || '',
+        image: editingFeed.selector_image || '',
+      });
+      setFeedInfo({
+        title: editingFeed.title || '',
+        description: editingFeed.description || '',
+      });
+      setMaxItems(editingFeed.max_items || 10);
+      setPreviewItems([]);
+      setPermalinkUrl('');
+      setError(null);
+    }
+  }, [editingFeed]);
 
   const buildPermalink = () => {
     const params = new URLSearchParams();
@@ -134,19 +158,34 @@ function FeedCreator() {
     setError(null);
 
     try {
-      const response = await axios.post(`${API_URL}/api/feeds`, {
-        title: feedInfo.title || 'Flux sans titre',
-        description: feedInfo.description || '',
-        source_url: url,
-        selectors: selectors,
-        max_items: maxItems,
-        import_articles: true
-      });
+      if (editingFeed) {
+        // Mode édition : PUT pour mettre à jour
+        const response = await axios.put(`${API_URL}/api/feeds/${editingFeed.id}`, {
+          title: feedInfo.title || 'Flux sans titre',
+          description: feedInfo.description || '',
+          source_url: url,
+          selectors: selectors,
+          max_items: maxItems,
+        });
 
-      if (response.data.success) {
-        alert(`Flux sauvegardé avec succès !\n${response.data.import_result?.new_articles || 0} articles importés.`);
-        // Option: redirection vers bibliothèque
-        // window.location.hash = '#library';
+        if (response.data.success) {
+          alert('Flux mis à jour avec succès !');
+          if (onClearEdit) onClearEdit();
+        }
+      } else {
+        // Mode création : POST
+        const response = await axios.post(`${API_URL}/api/feeds`, {
+          title: feedInfo.title || 'Flux sans titre',
+          description: feedInfo.description || '',
+          source_url: url,
+          selectors: selectors,
+          max_items: maxItems,
+          import_articles: true
+        });
+
+        if (response.data.success) {
+          alert(`Flux sauvegardé avec succès !\n${response.data.import_result?.new_articles || 0} articles importés.`);
+        }
       }
     } catch (err) {
       setError(err.response?.data?.error || 'Erreur lors de la sauvegarde du flux');
@@ -235,6 +274,22 @@ function FeedCreator() {
 
       {/* Scraping CSS (existant) */}
       {mode === 'css' && <form onSubmit={handlePreview} className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20">
+        {/* Bannière mode édition */}
+        {editingFeed && (
+          <div className="mb-4 p-3 bg-amber-500/20 border-2 border-amber-400 rounded-xl flex items-center justify-between">
+            <span className="text-white font-bold">
+              Edition du flux : "{editingFeed.title}"
+            </span>
+            <button
+              type="button"
+              onClick={() => { if (onClearEdit) onClearEdit(); }}
+              className="flex items-center gap-1 px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded-lg transition-colors text-sm"
+            >
+              <X size={14} />
+              Annuler
+            </button>
+          </div>
+        )}
         {/* URL */}
         <div className="mb-6">
           <label className="block text-white font-bold mb-2 text-lg">URL de la page</label>
@@ -336,15 +391,15 @@ function FeedCreator() {
             </button>
           )}
 
-          {previewItems.length > 0 && (
+          {(previewItems.length > 0 || editingFeed) && (
             <button
               type="button"
               onClick={handleSaveFeed}
               disabled={saving}
-              className="flex items-center gap-2 px-6 py-3 bg-green-500 hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors w-full justify-center"
+              className={`flex items-center gap-2 px-6 py-3 ${editingFeed ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'} disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold rounded-xl transition-colors w-full justify-center`}
             >
               {saving ? <Loader2 size={20} className="animate-spin" /> : <Save size={20} />}
-              {saving ? 'Sauvegarde...' : '💾 Sauvegarder ce flux'}
+              {saving ? 'Sauvegarde...' : editingFeed ? 'Mettre a jour le flux' : 'Sauvegarder ce flux'}
             </button>
           )}
         </div>

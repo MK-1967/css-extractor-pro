@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { BookOpen, RefreshCw, Trash2, Loader2, AlertCircle } from 'lucide-react';
+import { BookOpen, RefreshCw, Trash2, Loader2, AlertCircle, Pencil } from 'lucide-react';
 import API_URL from '../config';
 
-function FeedLibrary() {
+function FeedLibrary({ onEditFeed }) {
   const [feeds, setFeeds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -132,6 +132,15 @@ function FeedLibrary() {
                   </div>
 
                   <div className="flex gap-2 flex-shrink-0">
+                    {onEditFeed && feed.selector_item && (
+                      <button
+                        onClick={() => onEditFeed(feed)}
+                        className="p-3 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors shadow-md hover:shadow-lg"
+                        title="Modifier les sélecteurs CSS"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                    )}
                     <button
                       onClick={() => handleRefresh(feed.id)}
                       disabled={refreshingId === feed.id}

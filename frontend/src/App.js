@@ -16,6 +16,16 @@ const TABS = [
 
 function App() {
   const [activeTab, setActiveTab] = useState('feed');
+  const [editingFeed, setEditingFeed] = useState(null);
+
+  const handleEditFeed = (feed) => {
+    setEditingFeed(feed);
+    setActiveTab('feed');
+  };
+
+  const handleClearEdit = () => {
+    setEditingFeed(null);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-600 to-purple-800 px-4 py-8">
@@ -37,7 +47,7 @@ function App() {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => { setActiveTab(tab.id); if (tab.id !== 'feed') setEditingFeed(null); }}
                 className={`flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition-all ${
                   activeTab === tab.id
                     ? 'bg-white text-indigo-600 shadow-lg shadow-indigo-500/30'
@@ -53,8 +63,8 @@ function App() {
 
         {/* Content */}
         <main>
-          {activeTab === 'feed' && <FeedCreator />}
-          {activeTab === 'library' && <FeedLibrary />}
+          {activeTab === 'feed' && <FeedCreator editingFeed={editingFeed} onClearEdit={handleClearEdit} />}
+          {activeTab === 'library' && <FeedLibrary onEditFeed={handleEditFeed} />}
           {activeTab === 'aggregator' && <AggregatedReader />}
           {activeTab === 'css' && <CSSExtractor />}
           {activeTab === 'rss' && <RSSReader />}

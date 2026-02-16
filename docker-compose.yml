@@ -53,7 +53,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        REACT_APP_API_URL: http://10.40.10.107:3002
+        REACT_APP_API_URL: http://${API_HOST:-10.40.10.107}:3002
     container_name: css-extractor-frontend
     restart: unless-stopped
     ports:
